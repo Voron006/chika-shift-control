@@ -1,25 +1,76 @@
-export type Task = { id: string; title: string; person: string; time: string; group: string; done: boolean };
-export type Incident = { id: string; title: string; description: string; priority: 'Высокий' | 'Средний' | 'Низкий'; status: 'Новый' | 'В работе' | 'Решён'; created: string };
-export type Data = { version: 1; tasks: Task[]; incidents: Incident[]; shiftOpen: boolean; note: string };
-export const people = ['Миша — бариста', 'Тома', 'Егор — старший смены'];
-export const seed: Data = { version: 1, shiftOpen: true, note: 'Проверить запас овсяного молока перед вечерней сменой. Хорошей смены команде!', tasks: [
-{id:'t1',title:'Проверить кофемашину и помол',person:people[0],time:'08:00',group:'Открытие',done:true},
-{id:'t2',title:'Подготовить витрину и ценники',person:people[1],time:'08:15',group:'Открытие',done:true},
-{id:'t3',title:'Проверить температуру холодильников',person:people[2],time:'09:00',group:'В течение смены',done:false},
-{id:'t4',title:'Пополнить молоко и расходники',person:people[0],time:'12:00',group:'В течение смены',done:false},
-{id:'t5',title:'Протереть столы и зону выдачи',person:people[1],time:'13:00',group:'В течение смены',done:false},
-{id:'t6',title:'Промыть кофемашину',person:people[0],time:'19:30',group:'Закрытие',done:false},
-{id:'t7',title:'Пересчитать остатки и закрыть кассу',person:people[2],time:'20:00',group:'Закрытие',done:false}], incidents:[
-{id:'i1',title:'Подтекает кран у барной стойки',description:'Небольшая протечка под раковиной. Проверить соединение и подготовить заявку мастеру.',priority:'Средний',status:'В работе',created:'Демо · 10:25'},
-{id:'i2',title:'Заканчиваются стаканы 350 мл',description:'В запасе одна упаковка. Добавить в следующую поставку.',priority:'Низкий',status:'Новый',created:'Демо · 11:10'}] };
-export function isData(value: unknown): value is Data {
- if (!value || typeof value !== 'object') return false;
- const d = value as Data;
- return d.version === 1 && typeof d.shiftOpen === 'boolean' && typeof d.note === 'string' && Array.isArray(d.tasks) && d.tasks.every(t => t && ['id','title','person','time','group'].every(k => typeof t[k as keyof Task] === 'string') && typeof t.done === 'boolean') && Array.isArray(d.incidents) && d.incidents.every(i => i && ['id','title','description','created'].every(k => typeof i[k as keyof Incident] === 'string') && ['Высокий','Средний','Низкий'].includes(i.priority) && ['Новый','В работе','Решён'].includes(i.status));
+export const roles = ['Бариста', 'Хэд-бариста'] as const;
+export type Role = typeof roles[number];
+export const shifts = [
+  {id:'morning', label:'Утро', start:'07:30', end:'14:30'},
+  {id:'middle', label:'Мидл', start:'09:00', end:'16:00'},
+  {id:'evening', label:'Вечер', start:'14:30', end:'21:00'},
+] as const;
+export type ShiftId = typeof shifts[number]['id'];
+export type Task = {id:string; title:string; role:Role; shiftId:ShiftId; time:string; group:string; done:boolean};
+export type Incident = {id:string; title:string; description:string; priority:'Высокий'|'Средний'|'Низкий'; status:'Новый'|'В работе'|'Решён'; created:string; shiftId:ShiftId};
+export type ShiftState = {open:boolean; note:string};
+export type Data = {version:2; selectedShift:ShiftId; shiftStates:Record<ShiftId,ShiftState>; tasks:Task[]; incidents:Incident[]};
+export const groups = ['Открытие','В течение смены','Закрытие'];
+const examples = [
+  {title:'Подготовить бар и проверить помол',role:'Бариста',group:'Открытие'},
+  {title:'Проверить кассовую смену',role:'Хэд-бариста',group:'Открытие'},
+  {title:'Пополнить молоко и расходники',role:'Бариста',group:'В течение смены'},
+  {title:'Контролировать качество эспрессо и батча',role:'Хэд-бариста',group:'В течение смены'},
+  {title:'Убрать рабочее место и промыть оборудование',role:'Бариста',group:'Закрытие'},
+  {title:'Провести полную сдачу смены',role:'Хэд-бариста',group:'Закрытие'},
+] as const;
+export const seed:Data = {
+  version:2, selectedShift:'morning',
+  shiftStates:{morning:{open:true,note:''},middle:{open:false,note:''},evening:{open:false,note:''}},
+  tasks:shifts.flatMap(shift=>examples.map((item,index)=>({
+    ...item,id:shift.id+'-t'+index,shiftId:shift.id,done:false,
+    time:index<2?shift.start:index<4?(shift.id==='morning'?'10:30':shift.id==='middle'?'12:00':'17:30'):shift.end,
+  }))),
+  incidents:[],
+};
+export function selectedShift(data:Data){return shifts.find(s=>s.id===data.selectedShift)!;}
+export function shiftMinutes(id:ShiftId){const s=shifts.find(s=>s.id===id)!;return toMinutes(s.end)-toMinutes(s.start);}
+export function toMinutes(time:string){const [hours,minutes]=time.split(':').map(Number);return hours*60+minutes;}
+export function isTimeInShift(time:string,id:ShiftId){const shift=shifts.find(s=>s.id===id);return !!shift&&/^([01]\d|2[0-3]):[0-5]\d$/.test(time)&&toMinutes(time)>=toMinutes(shift.start)&&toMinutes(time)<=toMinutes(shift.end);}
+export function createId(){if(typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function')return crypto.randomUUID();return 'local-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
+function record(value:unknown):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value);}
+function strings(value:Record<string,unknown>,keys:string[]){return keys.every(k=>typeof value[k]==='string');}
+function isShift(value:unknown):value is ShiftId{return shifts.some(s=>s.id===value);}
+function isRole(value:unknown):value is Role{return roles.some(r=>r===value);}
+function incidentFields(value:unknown){return record(value)&&strings(value,['id','title','description','created'])&&['Высокий','Средний','Низкий'].includes(value.priority as string)&&['Новый','В работе','Решён'].includes(value.status as string);}
+export function isData(value:unknown):value is Data{
+ if(!record(value)||value.version!==2||!isShift(value.selectedShift)||!record(value.shiftStates))return false;
+ const states=value.shiftStates;
+ return shifts.every(s=>{const state=states[s.id];return record(state)&&typeof state.open==='boolean'&&typeof state.note==='string';})&&Array.isArray(value.tasks)&&value.tasks.every(task=>record(task)&&strings(task,['id','title','time','group'])&&typeof task.done==='boolean'&&isRole(task.role)&&isShift(task.shiftId))&&Array.isArray(value.incidents)&&value.incidents.every(i=>incidentFields(i)&&record(i)&&isShift(i.shiftId));
+}
+export function migrateData(value:unknown):Data|null{
+ if(isData(value))return value;
+ if(!record(value)||value.version!==1||typeof value.shiftOpen!=='boolean'||typeof value.note!=='string'||!Array.isArray(value.tasks)||!Array.isArray(value.incidents))return null;
+ if(!value.tasks.every(task=>record(task)&&strings(task,['id','title','person','time','group'])&&typeof task.done==='boolean')||!value.incidents.every(incidentFields))return null;
+ // Preserve old work; remove named assignees rather than adding pretend accounts.
+ const tasks=value.tasks.map(raw=>{
+  const task=raw as Record<string,unknown>;
+  const person=String(task.person);
+  const role:Role=/Егор|Женя|старший|head|хэд/i.test(person)?'Хэд-бариста':'Бариста';
+  const shiftId:ShiftId=task.group==='Закрытие'?'evening':'morning';
+  return {id:String(task.id),title:String(task.title),role,shiftId,time:String(task.time),group:String(task.group),done:task.done as boolean};
+ });
+ const missingShiftTasks=seed.tasks.filter(example=>!tasks.some(task=>task.shiftId===example.shiftId));
+ return {version:2,selectedShift:'morning',shiftStates:{morning:{open:value.shiftOpen,note:value.note},middle:{open:false,note:''},evening:{open:false,note:''}},tasks:[...tasks,...missingShiftTasks],incidents:value.incidents.map(raw=>({...raw as Omit<Incident,'shiftId'>,shiftId:'morning'}))};
 }
 
-// Сохраняем выполненные задачи при переименовании демокоманды.
-export function migrateDemoNames(data: Data): Data {
- const names: Record<string, string> = { 'Алекс — бариста': people[0], 'Саша — кассир': people[1], 'Тома — кассир': people[1], 'Женя — старший смены': people[2] };
- return { ...data, tasks: data.tasks.map(task => ({ ...task, person: names[task.person] ?? task.person })) };
-}
+export const headResponsibilities = [
+ 'Ответственность за кассовую смену',
+ 'Общение с конфликтными гостями',
+ 'Приём поставок',
+ 'Ответы на вопросы команды и передача проблем и вопросов руководству',
+ 'Полная сдача смены',
+ 'Решение ситуаций с агрессивными гостями: спокойный разговор, при необходимости — вызов полиции',
+ 'Решение вопросов с собаками',
+ 'Решение вопросов с гостями, работающими за ноутбуками',
+ 'Порядок на складе',
+ 'Качество эспрессо и батча',
+ 'Порядок в залах и координация хелперов',
+ 'Заявки дистрибуции и передача менеджерам списка недостающего',
+];
+export const baristaResponsibilities = ['Подготовить бар и проверить помол','Пополнить молоко и расходники','Убрать рабочее место и промыть оборудование'];
