@@ -284,3 +284,12 @@ footer{margin:0 24px;color:#eee6d6;border-color:#ffffff30;font-size:9px;padding:
 .locked-record{display:grid;place-items:center;width:32px;height:32px;flex-shrink:0;color:#e5dfce}
 .closed-record-note{display:flex;align-items:center;gap:8px;font-size:12px;color:#e9e2d0;border-top:1px solid #ffffff25;padding-top:13px}
 @media(max-width:700px){.locked-record{width:30px;height:30px}.closed-record-note{font-size:11px}}
+
+/* Рабочие чек-листы: подробности и условия выполнения. */
+.task-instruction{display:block;font-size:12px;line-height:1.65;color:#e5dfd2;margin-top:6px;overflow-wrap:anywhere}
+.task-copy .task-labels{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:7px}
+.condition-tag{font-size:9px;line-height:1.6;border:1px solid #eee5cd55;background:#d7c9a114;border-radius:12px;padding:2px 7px;color:#fff1ce}
+.checklist-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:15px;font-size:12px;color:#f5eddd}.checklist-summary small{font-size:10px;color:#e4d9bf}
+.checklist-progress{margin:12px 0 18px;height:5px}
+.checklist-grid .task-row{align-items:flex-start;padding:18px 0}.checklist-grid .task-row input{margin-top:2px;border-radius:5px}.checklist-grid .time{padding-top:3px}.checklist-grid .task-row .locked-record,.checklist-grid .task-row .edit-task{margin-top:0}.checklist-grid .task-copy strong{font-size:13px;line-height:1.55}.checklist-grid .task-toggle{align-items:flex-start}
+@media(max-width:700px){.task-instruction{font-size:11px;line-height:1.65}.checklist-grid .task-copy strong{font-size:12px}.checklist-summary{font-size:11px}.condition-tag{font-size:9px}.checklist-grid .task-row{gap:6px;padding:16px 0}.checklist-grid .task-toggle{gap:8px}.checklist-grid .time{font-size:9px}}

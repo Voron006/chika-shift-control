@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {seed,shifts,roles,isData,migrateData,isTimeInShift,shiftMinutes,headResponsibilities,preserveCompletedRecords} from '../lib/data.ts';
+import {seed,shifts,roles,isData,migrateData,isTimeInShift,shiftMinutes,headResponsibilities,preserveCompletedRecords,checklistTemplates,taskProgress} from '../lib/data.ts';
 
 test('three real shift windows, including their overlapping hours',()=>{
  assert.deepEqual(shifts.map(({start,end})=>[start,end]),[['07:30','14:30'],['09:00','16:00'],['14:30','21:00']]);
@@ -43,7 +43,7 @@ test('old storage keeps work and replaces named assignments with duties',()=>{
  assert.equal(migrated.incidents[0].description,'Keep this');
  assert.equal(migrated.incidents[0].priority,'Высокий');
  assert.equal(migrated.tasks.some(task=>'person' in task),false);
- assert.equal(migrated.tasks.filter(task=>task.shiftId==='middle').length,6);
+ assert.equal(migrated.tasks.filter(task=>task.shiftId==='middle').length,9);
  assert.equal(old.tasks[0].person,'Миша — бариста');
 });
 
@@ -99,4 +99,48 @@ test('first completion succeeds, all subsequent changes are blocked after storag
  const blocked=preserveCompletedRecords(reloaded,{...reloaded,selectedShift:'evening',tasks:reloaded.tasks.map((task,index)=>index===0?{...task,done:false,title:'Reset'}:task)});
  assert.equal(blocked.selectedShift,'evening');
  assert.deepEqual(blocked.tasks[0],completed.tasks[0]);
+});
+
+test('photo checklists have 9 handover and 30 evening items with distinct shift IDs',()=>{
+ assert.equal(checklistTemplates.handover.length,9);
+ assert.equal(checklistTemplates.evening.length,30);
+ assert.deepEqual(shifts.map(shift=>seed.tasks.filter(task=>task.shiftId===shift.id).length),[9,9,30]);
+ assert.equal(seed.tasks.length,48);
+ assert.equal(new Set(seed.tasks.map(task=>task.id)).size,48);
+ const evening=seed.tasks.filter(task=>task.shiftId==='evening');
+ assert.equal(evening.filter(task=>!!task.condition).length,4);
+ assert.ok(evening.some(task=>task.condition==='По понедельникам'));
+ assert.equal(taskProgress(evening).total,26);
+ const completedMandatory=evening.map(task=>({...task,done:!task.condition}));
+ assert.equal(taskProgress(completedMandatory).percent,100);
+ assert.equal(taskProgress(completedMandatory).conditionalDone,0);
+});
+
+test('checklist upgrade preserves completions and custom work, replaces only untouched examples',()=>{
+ const previous={...structuredClone(seed)};delete previous.checklistRevision;
+ const completed={id:'morning-t0',title:'Подготовить бар и проверить помол',role:'Бариста',shiftId:'morning',time:'07:30',group:'Открытие',done:true};
+ const untouched={id:'morning-t1',title:'Проверить кассовую смену',role:'Хэд-бариста',shiftId:'morning',time:'07:30',group:'Открытие',done:false};
+ const edited={id:'middle-t2',title:'Custom edited milk task',role:'Бариста',shiftId:'middle',time:'12:00',group:'В течение смены',done:false};
+ const custom={...edited,id:'custom',title:'My own task'};
+ previous.tasks=[completed,untouched,edited,custom];
+ previous.shiftStates.middle.note='Keep handover';
+ const next=migrateData(previous);
+ assert.equal(isData(next),true);
+ assert.deepEqual(next.tasks.find(task=>task.id===completed.id),completed);
+ assert.deepEqual(next.tasks.find(task=>task.id===edited.id),edited);
+ assert.deepEqual(next.tasks.find(task=>task.id===custom.id),custom);
+ assert.equal(next.tasks.some(task=>task.id===untouched.id),false);
+ assert.equal(next.shiftStates.middle.note,'Keep handover');
+ assert.equal(next.tasks.length,51);
+ assert.deepEqual(migrateData(JSON.parse(JSON.stringify(next))),next);
+});
+
+test('every photo checklist title, instruction and condition has an English translation',async()=>{
+ const {english}=await import('../lib/translations.ts');
+ for(const list of Object.values(checklistTemplates))for(const item of list){
+  for(const text of [item.title,item.description,item.condition].filter(Boolean)){
+   assert.equal(typeof english[text],'string',`Missing translation: ${text}`);
+   assert.ok(!/[А-Яа-яЁё]/.test(english[text]),`Untranslated checklist: ${text}`);
+  }
+ }
 });
