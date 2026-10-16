@@ -74,3 +74,15 @@ export const headResponsibilities = [
  'Заявки дистрибуции и передача менеджерам списка недостающего',
 ];
 export const baristaResponsibilities = ['Подготовить бар и проверить помол','Пополнить молоко и расходники','Убрать рабочее место и промыть оборудование'];
+
+// Local prototype rule, not an authorization boundary. Real admin overrides
+// must be checked on the server after authenticated accounts are connected.
+export function preserveCompletedRecords(previous:Data,proposed:Data):Data{
+ function preserve<T extends {id:string}>(oldItems:T[],newItems:T[],isClosed:(item:T)=>boolean):T[]{
+  const closed=new Map(oldItems.filter(isClosed).map(item=>[item.id,item]));
+  const next=newItems.map(item=>closed.get(item.id)??item);
+  for(const [id,item] of closed)if(!next.some(candidate=>candidate.id===id))next.push(item);
+  return next;
+ }
+ return {...proposed,tasks:preserve(previous.tasks,proposed.tasks,task=>task.done),incidents:preserve(previous.incidents,proposed.incidents,incident=>incident.status==='Решён')};
+}

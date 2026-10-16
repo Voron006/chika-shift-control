@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {seed,shifts,roles,isData,migrateData,isTimeInShift,shiftMinutes,headResponsibilities} from '../lib/data.ts';
+import {seed,shifts,roles,isData,migrateData,isTimeInShift,shiftMinutes,headResponsibilities,preserveCompletedRecords} from '../lib/data.ts';
 
 test('three real shift windows, including their overlapping hours',()=>{
  assert.deepEqual(shifts.map(({start,end})=>[start,end]),[['07:30','14:30'],['09:00','16:00'],['14:30','21:00']]);
@@ -64,4 +64,39 @@ test('head barista reference contains the 12 supplied responsibilities',()=>{
  assert.ok(headResponsibilities.some(item=>item.includes('кассовую')));
  assert.ok(headResponsibilities.some(item=>item.includes('дистрибуции')));
  assert.ok(headResponsibilities.some(item=>item.includes('полиции')));
+});
+
+test('completed tasks cannot be reopened, edited, reassigned or removed',()=>{
+ const previous=structuredClone(seed);previous.tasks[0].done=true;
+ const closed=structuredClone(previous.tasks[0]);
+ const proposed=structuredClone(previous);
+ Object.assign(proposed.tasks[0],{done:false,title:'Changed',role:'Хэд-бариста',shiftId:'evening',time:'20:30'});
+ const next=preserveCompletedRecords(previous,proposed);
+ assert.deepEqual(next.tasks[0],closed);
+ assert.deepEqual(previous.tasks[0],closed);
+ const removed=preserveCompletedRecords(previous,{...previous,tasks:previous.tasks.slice(1)});
+ assert.deepEqual(removed.tasks.find(task=>task.id===closed.id),closed);
+});
+
+test('resolved incidents keep every field while active incidents remain editable',()=>{
+ const previous=structuredClone(seed);
+ const closed={id:'resolved',title:'Fixed',description:'Original details',priority:'Высокий',status:'Решён',created:'2026-10-16T10:00:00Z',shiftId:'morning'};
+ const active={...closed,id:'active',status:'Новый'};
+ previous.incidents=[closed,active];
+ const next=preserveCompletedRecords(previous,{...previous,incidents:[{...closed,status:'Новый',priority:'Низкий',title:'Edited'},{...active,status:'В работе',priority:'Средний'}]});
+ assert.deepEqual(next.incidents[0],closed);
+ assert.equal(next.incidents[1].status,'В работе');
+ assert.equal(next.incidents[1].priority,'Средний');
+ const removed=preserveCompletedRecords(previous,{...previous,incidents:[]});
+ assert.deepEqual(removed.incidents,[closed]);
+});
+
+test('first completion succeeds, all subsequent changes are blocked after storage reload',()=>{
+ const previous=structuredClone(seed);
+ const completed=preserveCompletedRecords(previous,{...previous,tasks:previous.tasks.map((task,index)=>index===0?{...task,done:true}:task)});
+ assert.equal(completed.tasks[0].done,true);
+ const reloaded=migrateData(JSON.parse(JSON.stringify(completed)));
+ const blocked=preserveCompletedRecords(reloaded,{...reloaded,selectedShift:'evening',tasks:reloaded.tasks.map((task,index)=>index===0?{...task,done:false,title:'Reset'}:task)});
+ assert.equal(blocked.selectedShift,'evening');
+ assert.deepEqual(blocked.tasks[0],completed.tasks[0]);
 });

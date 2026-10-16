@@ -277,3 +277,10 @@ footer{margin:0 24px;color:#eee6d6;border-color:#ffffff30;font-size:9px;padding:
 @media(max-width:1000px){.shift-picker{flex-wrap:wrap}.shift-options{width:100%;flex-basis:100%}.shift-picker>.urgent-button{width:100%}}
 @media(max-width:700px){.shift-picker{border-radius:20px;margin-bottom:22px;padding:7px;gap:9px}.shift-options{gap:3px}.shift-option{padding:10px 5px;gap:5px;flex-direction:column;text-align:center;border-radius:15px}.shift-option strong{font-size:11px}.shift-option small{font-size:9px}.shift-option svg{width:15px}.urgent-button{min-height:42px}.urgent-dialog{padding:20px}.task-toggle{gap:9px}.edit-task{width:30px;height:30px}.task-row .time{font-size:10px}.task-row{gap:8px}.urgent-notice span{font-size:12px}.urgent-notice small{font-size:10px}}
 .role-duties{border-top:1px solid #ffffff22;padding:14px 0}.role-duties summary{display:flex;align-items:center;gap:11px;cursor:pointer;list-style:none}.role-duties summary::-webkit-details-marker{display:none}.role-duties summary strong{display:block;font-size:13px;font-weight:500}.role-duties summary small{display:block;font-size:10px;color:#e4ddce;margin-top:3px}.duties-count{margin-left:auto;border:1px solid #ffffff40;padding:3px 9px;border-radius:20px;font-size:10px}.role-duties summary::after{content:'+';color:#f3e9ce;font-size:20px;margin-left:4px}.role-duties[open] summary::after{content:'−'}.role-duties ol{list-style:decimal;margin:15px 0 0;padding-left:22px}.role-duties li{font-size:12px;color:#f0e9d9;line-height:1.7;margin:8px 0;padding-left:3px}.role-duties summary:focus-visible{outline:2px solid var(--accent);outline-offset:5px;border-radius:8px}
+
+/* Завершённые записи остаются доступными для чтения. */
+.task-row.completed .task-toggle{cursor:default}
+.task-row input:disabled{cursor:default;opacity:1}
+.locked-record{display:grid;place-items:center;width:32px;height:32px;flex-shrink:0;color:#e5dfce}
+.closed-record-note{display:flex;align-items:center;gap:8px;font-size:12px;color:#e9e2d0;border-top:1px solid #ffffff25;padding-top:13px}
+@media(max-width:700px){.locked-record{width:30px;height:30px}.closed-record-note{font-size:11px}}

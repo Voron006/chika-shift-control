@@ -51,3 +51,10 @@ Object.assign(english,{
  'Порядок в залах и координация хелперов':'Ensuring order in guest areas and directing helpers',
  'Заявки дистрибуции и передача менеджерам списка недостающего':'Preparing distribution requests and passing shortage lists to managers',
 });
+Object.assign(english,{
+ 'Отметить задачу выполненной? После подтверждения изменить её будет нельзя.':'Mark this task complete? Once confirmed, it cannot be changed.',
+ 'Закрыть инцидент как решённый? После подтверждения изменить его будет нельзя.':'Close this incident as resolved? Once confirmed, it cannot be changed.',
+ 'Выполнено. Изменения заблокированы.':'Completed. Changes are locked.',
+ 'Решено. Изменения заблокированы.':'Resolved. Changes are locked.',
+ 'Статус обновлён.':'Status updated.',
+});
