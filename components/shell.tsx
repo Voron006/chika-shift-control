@@ -1,0 +1,14 @@
+'use client';
+import Link from 'next/link';
+import {usePathname} from 'next/navigation';
+import {LayoutDashboard,ListChecks,TriangleAlert,ArrowUpRight,FlaskConical} from 'lucide-react';
+import {Store,useStore} from './store';
+import {Brand} from './brand';
+import {LanguageProvider,LanguageSwitch,useLanguage} from './language';
+const links=[{href:'/',label:'Обзор смены',icon:LayoutDashboard},{href:'/tasks',label:'Задачи',icon:ListChecks},{href:'/incidents',label:'Инциденты',icon:TriangleAlert}];
+function Frame({children}:{children:React.ReactNode}){
+ const path=usePathname();const {error,ready,data}=useStore();const {t,languageError}=useLanguage();
+ const done=data.tasks.filter(task=>task.done).length;const progress=Math.round(done/Math.max(data.tasks.length,1)*100);
+ return <div className="app-shell"><a href="#content" className="skip">{t('Перейти к содержимому')}</a><aside className="sidebar"><Brand/><div className="cafe"><span className="cafe-avatar">c</span><div>ch’ika<small>{t('Демонстрационная кофейня')}</small></div></div><p className="nav-label">{t('РАБОЧЕЕ ПРОСТРАНСТВО')}</p><nav aria-label={t('Основная навигация')}>{links.map(({href,label,icon:Icon})=><Link key={href} href={href} className={path===href?'nav-link active':'nav-link'} aria-current={path===href?'page':undefined}><Icon size={19}/>{t(label)}{path===href&&<span className="nav-dot"/>}</Link>)}</nav><div className="shift-pulse"><span>{t('Ритм вашей смены')}</span><div className="pulse-ring" style={{background:`conic-gradient(#eee9d9 ${progress}%, #ffffff18 0)`}}><div><strong>{progress}<small>%</small></strong><span>{t('задач выполнено')}</span></div></div><p>{done} {t('из')} {data.tasks.length} {t('маленьких шагов')}</p></div><div className="sidebar-bottom"><div className="demo-card"><FlaskConical size={20}/><strong>{t('Можно пробовать')}</strong><p>{t('Демоверсия: пробуйте, отмечайте задачи и собирайте свою идеальную смену.')}</p></div><div className="local-status"><span className="dot"/>{t('Данные в этом браузере')}<ArrowUpRight size={14}/></div></div></aside><div className="workspace"><header className="topbar"><span>{t('Кофейня')}<span className="slash">/</span>{t(links.find(link=>link.href===path)?.label??'Страница')}</span><LanguageSwitch/></header><main id="content">{error&&<p role="alert" className="notice">{t(error)}</p>}{languageError&&<p role="status" className="notice">{t('Не удалось сохранить язык. Выбор действует до обновления страницы.')}</p>}{ready?children:<p className="muted" role="status">{t('Загружаем вашу смену…')}</p>}</main><footer>Shift Control<span>{t('Спокойная смена начинается с порядка.')}</span></footer></div></div>;
+}
+export function Shell({children}:{children:React.ReactNode}){return <LanguageProvider><Store><Frame>{children}</Frame></Store></LanguageProvider>}
